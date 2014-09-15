@@ -1,3 +1,47 @@
+<!-------- @HEADER
+ !
+ ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ !
+ !  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ !                  Copyright 2012 Sandia Corporation
+ !
+ ! Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ ! the U.S. Government retains certain rights in this software.
+ !
+ ! Redistribution and use in source and binary forms, with or without
+ ! modification, are permitted provided that the following conditions are
+ ! met:
+ !
+ ! 1. Redistributions of source code must retain the above copyright
+ ! notice, this list of conditions and the following disclaimer.
+ !
+ ! 2. Redistributions in binary form must reproduce the above copyright
+ ! notice, this list of conditions and the following disclaimer in the
+ ! documentation and/or other materials provided with the distribution.
+ !
+ ! 3. Neither the name of the Corporation nor the names of the
+ ! contributors may be used to endorse or promote products derived from
+ ! this software without specific prior written permission.
+ !
+ ! THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ ! EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ ! IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ ! PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ ! CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ ! EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ ! PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ ! PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ ! LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ ! NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ ! SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ !
+ ! Questions? Contact Karen Devine	kddevin@sandia.gov
+ !                    Erik Boman	egboman@sandia.gov
+ !
+ ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ !
+ ! @HEADER
+-------> 
 <!doctype html public "-//w3c//dtd html 4.0 transitional//en">
 <html>
 <head>
@@ -13,18 +57,6 @@
    <meta name="description" content="Zoltan:  User's Guide for the Zoltan Library project at Sandia National Laboratories">
    <meta name="GENERATOR" content="Mozilla/4.7 [en] (X11; U; SunOS 5.7 sun4u) [Netscape]">
    <title>Zoltan User's Guide</title>
-<!-----------------------------------------------------------------------------
- ! Zoltan Library for Parallel Applications            !
- ! Copyright (c) 2000-2010, Sandia National Laboratories.                !
- ! For more info, see the README file in the top-level Zoltan directory.      !
- !----------------------------------------------------------------------------!
--->
-<!-- CVS File Information
-     $RCSfile$
-     $Author$
-     $Date$
-     $Revision$
--->
 
 <!----CHANGE INFORMATION IN AREAS WITH THIS HEADER---->
 <!----SCROLL DOWN TO FIND OTHER AREAS TO BE CHANGED---->
@@ -287,17 +319,14 @@ User's Guide
 <td width="50%" valign=top>
 <b> Sandia National Laboratories</b><br>
 <a href="http://www.sandia.gov/~egboman">Erik Boman</a> <br>
-Cedric Chevalier<br>
 <a href="http://www.cs.sandia.gov/~kddevin">Karen Devine</a><br>
 Vitus Leung<br>
 <a href="http://www.cise.ufl.edu/~srajaman/">Sivasankaran Rajamanickam</a><br>
 Lee Ann Riesen<br>
-Michael Wolf <br>
 </td>
 <td width="50%" valign=top>
 <b> Ohio State University</b><br>
 <a href="http://bmi.osu.edu/~umit/">Umit Catalyurek</a><br>
-<a href="http://www.ece.osu.edu/~bozdagd">Doruk Bozdag</a><br>
 </td>
 </tr>
 </table>
@@ -307,22 +336,31 @@ Michael Wolf <br>
 <tr>
 <td width="50%" valign=top>
 <b> Sandia National Laboratories: </b><br>
+Cedric Chevalier (currently at CEA, DAM, France) <br>
 Robert Heaphy<br>
 <a href="http://www.cs.sandia.gov/~bahendr">Bruce Hendrickson</a></b><br>
 Matthew St. John<br>
 Courtenay Vaughan<br>
+Michael Wolf (currently at MIT Lincoln Lab) <br>
 <br>
 </td>
 <td width="50%" valign=top>
-<b> Williams College</b><br>
-<a href="http://www.teresco.org/~terescoj/">James Teresco</a><br>
+<b> Ohio State University</b><br>
+<a href="http://www.ece.osu.edu/~bozdagd">Doruk Bozdag</a><br>
 </td>
 </tr>
 <tr>
 <td width="50%" valign=top>
+<b> Williams College</b><br>
+<a href="http://www.teresco.org/~terescoj/">James Teresco</a><br>
+<br>
+</td>
+<td width="50%" valign=top>
 <b> National Institute of Standards and Technology</b><br>
 <a href="http://math.nist.gov/~mitchell">William F. Mitchell</a><br>
 </td>
+</tr>
+<tr>
 <td width="50%" valign=top>
 <b> Rensselaer Polytechnic Institute</b><br>
 Jamal Faik<br>
@@ -337,7 +375,7 @@ Luis Gervasio<br>
 <!---------------------------------------------------------------------------->
 <!---------------------------------------------------------------------------->
 <hr WIDTH="100%">
-<div align=right><b><i>Zoltan User's Guide, Version 3.6</i></b></div>
+<div align=right><b><i>Zoltan User's Guide, Version 3.8</i></b></div>
 
 <p>
 <h4>
@@ -434,6 +472,10 @@ Decomposition</a>
 <br><a href="ug_alg_ptscotch.html">Scotch</a>
 </blockquote>
 <br><a href="ug_alg_hier.html">Hierarchical Partitioning</a>
+<blockquote>
+<a href="ug_alg_hier.html#HierMC">For multicore architectures</a>
+<br><a href="ug_alg_hier.html#HierDist">For distributed systems</a>
+</blockquote>
 </blockquote>
 
 <h4>
@@ -482,10 +524,7 @@ Decomposition</a>
 <a href="ug_index.html">Index of Interface and Query Functions</a></h4>
 
 <hr WIDTH="100%">
-Copyright (c) 2000-2010, Sandia National Laboratories. <br>
-The Zoltan Library and its documentation are released
-under the <a href="http://www.gnu.org/copyleft/lesser.html">GNU Lesser General Public License (LGPL)</a>.  
-See the README file in the main Zoltan directory for more information.
+Copyright (c) 2000-2012, Sandia National Laboratories. <br>
 
 <hr WIDTH="100%">[<a href="../Zoltan.html">Zoltan Home Page</a>&nbsp; |
 <a href="ug_intro.html">Next:&nbsp;

@@ -1,26 +1,57 @@
-##############################################################################
-# Zoltan Library for Parallel Applications                                   #
-# For more info, see the README file in the top-level Zoltan directory.      # 
-##############################################################################
-##############################################################################
-# CVS File Information
-#    $RCSfile$
-#    $Author$
-#    $Date$
-#    Revision$
-##############################################################################
+# @HEADER
+#
+########################################################################
+#
+#  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+#                  Copyright 2012 Sandia Corporation
+#
+# Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+# the U.S. Government retains certain rights in this software.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+#
+# 1. Redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright
+# notice, this list of conditions and the following disclaimer in the
+# documentation and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the Corporation nor the names of the
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Questions? Contact Karen Devine	kddevin@sandia.gov
+#                    Erik Boman	        egboman@sandia.gov
+#
+########################################################################
+#
+# @HEADER
 
 ZOD = ../$(ZOLTAN_OBJ_DIR)
 ZOM = $(F90_MODULE_PREFIX)$(ZOD) -I../fort
 
 all: 			$(ZOD)/cwrap.o $(ZOD)/ztypes.o \
-			$(ZOD)/zoltan_user_data.o  $(ZOD)/lb_user_const.o \
+			$(ZOD)/zoltan_user_data.o  \
 			$(ZOD)/fwrap.o 
 
 $(ZOD)/fwrap.o: 	$(ZOD)/ztypes.o  \
 			$(ZOD)/zoltan_user_data.o \
-			$(ZOD)/lb_user_const.o  \
-	 	fwrap.f90 lbif.f90 lbfn.f90 \
+	 	fwrap.f90 \
 		set_numgeom.if			set_numgeom.fn \
 		set_geommulti.if		set_geommulti.fn \
 		set_geom.if			set_geom.fn \
@@ -54,37 +85,12 @@ $(ZOD)/fwrap.o: 	$(ZOD)/ztypes.o  \
 		set_coarseobjlist.if 		set_coarseobjlist.fn \
 		set_firstcoarseobj.if		set_firstcoarseobj.fn \
 		set_nextcoarseobj.if		set_nextcoarseobj.fn \
-		set_numgeom.if.lbif		set_numgeom.fn.lbfn \
-		set_geom.if.lbif		set_geom.fn.lbfn \
-		set_numedges.if.lbif 		set_numedges.fn.lbfn \
-		set_edgelist.if.lbif		set_edgelist.fn.lbfn \
-		set_numobj.if.lbif 		set_numobj.fn.lbfn \
-		set_objlist.if.lbif		set_objlist.fn.lbfn \
-		set_firstobj.if.lbif		set_firstobj.fn.lbfn \
-		set_nextobj.if.lbif		set_nextobj.fn.lbfn \
-		set_numborderobj.if.lbif	set_numborderobj.fn.lbfn \
-		set_borderobjlist.if.lbif	set_borderobjlist.fn.lbfn \
-		set_firstborderobj.if.lbif	set_firstborderobj.fn.lbfn \
-		set_nextborderobj.if.lbif	set_nextborderobj.fn.lbfn \
-		set_premigrate.if.lbif		set_premigrate.fn.lbfn \
-		set_midmigrate.if.lbif		set_midmigrate.fn.lbfn \
-		set_postmigrate.if.lbif		set_postmigrate.fn.lbfn \
-		set_objsize.if.lbif		set_objsize.fn.lbfn \
-		set_packobj.if.lbif		set_packobj.fn.lbfn \
-		set_unpackobj.if.lbif		set_unpackobj.fn.lbfn \
-		set_numchild.if.lbif 		set_numchild.fn.lbfn \
-		set_childweight.if.lbif 	set_childweight.fn.lbfn \
-		set_childlist.if.lbif 		set_childlist.fn.lbfn \
 		set_hgcs.if			set_hgcs.fn \
 		set_hgsizecs.if			set_hgsizecs.fn \
 		set_hgedgeweights.if		set_hgedgeweights.fn \
 		set_hgsizeedgeweights.if	set_hgsizeedgeweights.fn \
                 set_numfixedobj.if              set_numfixedobj.fn \
                 set_fixedobjlist.if             set_fixedobjlist.fn \
-		set_numcoarseobj.if.lbif 	set_numcoarseobj.fn.lbfn \
-		set_coarseobjlist.if.lbif 	set_coarseobjlist.fn.lbfn \
-		set_firstcoarseobj.if.lbif	set_firstcoarseobj.fn.lbfn \
-		set_nextcoarseobj.if.lbif	set_nextcoarseobj.fn.lbfn \
 		set_hiernumlevels.if		set_hiernumlevels.fn \
 		set_hierpartition.if		set_hierpartition.fn \
 		set_hiermethod.if		set_hiermethod.fn 
@@ -94,11 +100,6 @@ $(ZOD)/fwrap.o: 	$(ZOD)/ztypes.o  \
 $(ZOD)/zoltan_user_data.o:	zoltan_user_data.f90 \
 			$(ZOD)/ztypes.o
 	$(F90) -c  $(ZOM) zoltan_user_data.f90
-	/bin/mv *.o *.mod $(ZOD)
-
-$(ZOD)/lb_user_const.o:	lb_user_const.f90 \
-			$(ZOD)/ztypes.o
-	$(F90) -c  $(ZOM) lb_user_const.f90
 	/bin/mv *.o *.mod $(ZOD)
 
 $(ZOD)/ztypes.o: 	ztypes.f90
@@ -117,7 +118,6 @@ clean:
 	      $(ZOD)/fwrap.o \
 	      $(ZOD)/ztypes.o \
 	      $(ZOD)/zoltan_user_data.o \
-	      $(ZOD)/lb_user_const.o \
               *.vo *.mod *.dbg \
 	      $(ZOD)/zfdrive 
 	@rm -Rf album

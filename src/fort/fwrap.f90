@@ -1,21 +1,54 @@
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Zoltan Library for Parallel Applications                                   !
-! For more info, see the README file in the top-level Zoltan directory.      ! 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  CVS File Information :
-!     $RCSfile$
-!     $Author$
-!     $Date$
-!     Revision$
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! 
+!! @HEADER
+!!
+!!!!**********************************************************************
+!!
+!!  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+!!                  Copyright 2012 Sandia Corporation
+!!
+!! Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+!! the U.S. Government retains certain rights in this software.
+!!
+!! Redistribution and use in source and binary forms, with or without
+!! modification, are permitted provided that the following conditions are
+!! met:
+!!
+!! 1. Redistributions of source code must retain the above copyright
+!! notice, this list of conditions and the following disclaimer.
+!!
+!! 2. Redistributions in binary form must reproduce the above copyright
+!! notice, this list of conditions and the following disclaimer in the
+!! documentation and/or other materials provided with the distribution.
+!!
+!! 3. Neither the name of the Corporation nor the names of the
+!! contributors may be used to endorse or promote products derived from
+!! this software without specific prior written permission.
+!!
+!! THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+!! EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+!! IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+!! PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+!! CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+!! EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+!! PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+!! PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+!! LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+!! NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+!! SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+!!
+!! Questions? Contact Karen Devine	kddevin@sandia.gov
+!!                    Erik Boman	egboman@sandia.gov
+!!
+!!!!**********************************************************************
+!!
+!! @HEADER
+ !!
 
 !--------------------------------------------------------------------------
 ! preprocessor directives to handle special case compilers
 
 module zoltan
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 private
@@ -275,7 +308,6 @@ integer, parameter :: stderr = 6
 interface
 subroutine Zfw_Get_Address_int(arg,ret_addr)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 integer(Zoltan_INT) :: arg
 integer(Zoltan_INT_PTR), intent(out) :: ret_addr
@@ -285,7 +317,6 @@ end interface
 interface
 subroutine Zfw_Get_Address_struct(arg,ret_addr)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 type(Zoltan_Struct) :: arg
 integer(Zoltan_INT_PTR), intent(out) :: ret_addr
@@ -295,7 +326,6 @@ end interface
 interface
 function Zfw_Initialize(ver)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Initialize
@@ -306,7 +336,6 @@ end interface
 interface
 function Zfw_Initialize1(argc,argv,starts,ver)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Initialize1
@@ -319,7 +348,6 @@ end interface
 interface
 subroutine Zfw_Create(communicator,zz,nbytes)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer, intent(in) :: communicator
@@ -331,7 +359,6 @@ end interface
 interface
 subroutine Zfw_Copy(zzIn, zzOut, nbytes)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT), dimension(*), intent(in) :: zzIn
@@ -343,7 +370,6 @@ end interface
 interface
 function Zfw_Copy_To(zz1, zz2, nbytes)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Copy_To
@@ -355,7 +381,6 @@ end interface
 interface
 subroutine Zfw_Destroy(zz,nbytes)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT), dimension(*), intent(in) :: zz
@@ -366,7 +391,6 @@ end interface
 interface
 function Zfw_Align(size)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Align
@@ -377,7 +401,6 @@ end interface
 interface
 subroutine Zfw_Memory_Stats()
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 end subroutine Zfw_Memory_Stats
@@ -386,7 +409,6 @@ end interface
 interface
 function Zfw_Set_Fn0f(zz,nbytes,fn_type,fn_ptr)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn0f
@@ -399,7 +421,6 @@ end interface
 interface
 function Zfw_Set_Fn0s(zz,nbytes,fn_type,fn_ptr)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn0s
@@ -412,7 +433,6 @@ end interface
 interface
 function Zfw_Set_Fn1f(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn1f
@@ -426,7 +446,6 @@ end interface
 interface
 function Zfw_Set_Fn1s(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn1s
@@ -440,7 +459,6 @@ end interface
 interface
 function Zfw_Set_Fn2f(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn2f
@@ -454,7 +472,6 @@ end interface
 interface
 function Zfw_Set_Fn2s(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn2s
@@ -468,7 +485,6 @@ end interface
 interface
 function Zfw_Set_Fn3f(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn3f
@@ -482,7 +498,6 @@ end interface
 interface
 function Zfw_Set_Fn3s(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn3s
@@ -496,7 +511,6 @@ end interface
 interface
 function Zfw_Set_Fn4f(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn4f
@@ -510,7 +524,6 @@ end interface
 interface
 function Zfw_Set_Fn4s(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn4s
@@ -524,7 +537,6 @@ end interface
 interface
 function Zfw_Set_Fn5f(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn5f
@@ -538,7 +550,6 @@ end interface
 interface
 function Zfw_Set_Fn5s(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn5s
@@ -552,7 +563,6 @@ end interface
 interface
 function Zfw_Set_Fn6f(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn6f
@@ -566,7 +576,6 @@ end interface
 interface
 function Zfw_Set_Fn6s(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn6s
@@ -580,7 +589,6 @@ end interface
 interface
 function Zfw_Set_Fn7f(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn7f
@@ -594,7 +602,6 @@ end interface
 interface
 function Zfw_Set_Fn7s(zz,nbytes,fn_type,fn_ptr,data)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Fn7s
@@ -609,7 +616,6 @@ interface
 function Zfw_Set_Param(zz,nbytes,param_name,param_name_len, &
                           new_value,new_value_len)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Param
@@ -622,7 +628,6 @@ interface
 function Zfw_Set_Param_Vec(zz,nbytes,param_name,param_name_len, &
                           new_value,new_value_len,index)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Set_Param_Vec
@@ -657,7 +662,6 @@ end interface
 interface
 function Zfw_LB_Eval(zz,nbytes,print_stats)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_LB_Eval
@@ -670,7 +674,6 @@ interface
 function Zfw_LB_Set_Part_Sizes(zz,nbytes,global_part,len,partids,&
                                wgtidx,partsizes)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_LB_Set_Part_Sizes
@@ -683,7 +686,6 @@ end interface
 interface
 function Zfw_LB_Point_Assign(zz,nbytes,coords,proc)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_LB_Point_Assign
@@ -697,7 +699,6 @@ end interface
 interface
 function Zfw_LB_Point_PP_Assign(zz,nbytes,coords,proc,part)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_LB_Point_PP_Assign
@@ -712,7 +713,6 @@ end interface
 interface
 function Zfw_LB_Box_Assign(zz,nbytes,xmin,ymin,zmin,xmax,ymax,zmax,procs,numprocs)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_LB_Box_Assign
@@ -727,7 +727,6 @@ end interface
 interface
 function Zfw_LB_Box_PP_Assign(zz,nbytes,xmin,ymin,zmin,xmax,ymax,zmax,procs,numprocs,parts,numparts)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_LB_Box_PP_Assign
@@ -772,7 +771,6 @@ function Zfw_Compute_Destinations(zz,nbytes, &
                        input_local_ids,input_procs,num_output, &
                        output_global_ids,output_local_ids,output_procs)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Compute_Destinations
@@ -815,7 +813,6 @@ function Zfw_Help_Migrate(zz,nbytes, &
                        import_local_ids,import_procs,num_export, &
                        export_global_ids,export_local_ids,export_procs)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Help_Migrate
@@ -880,7 +877,6 @@ interface
 function Zfw_Generate_Files(zz,nbytes,filename,filename_len, &
                           base_index, gen_geom, gen_graph, gen_hg)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Generate_Files
@@ -893,7 +889,6 @@ end interface
 interface
 function Zfw_RCB_Box(zz,nbytes,part,ndim,xmin,ymin,zmin,xmax,ymax,zmax)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_RCB_Box
@@ -909,7 +904,6 @@ interface
 subroutine Zfw_Register_Fort_Malloc(malloc_int,free_int,&
       fort_malloc_set_struct)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 external malloc_int,free_int,fort_malloc_set_struct
@@ -919,7 +913,6 @@ end interface
 interface
 function Zfw_Get_Wgt_Dim(zz,nbytes)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Get_Wgt_Dim
@@ -931,7 +924,6 @@ end interface
 interface
 function Zfw_Get_Comm_Dim(zz,nbytes)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT) :: Zfw_Get_Comm_Dim
@@ -943,7 +935,6 @@ end interface
 interface
 subroutine Zfw_Reftree_Get_Child_Order(zz,nbytes,order,ierr)
 use zoltan_types
-use lb_user_const
 use zoltan_user_data
 implicit none
 integer(Zoltan_INT), dimension(*), intent(in) :: zz
@@ -1141,37 +1132,6 @@ INCLUDE "set_fixedobjlist.if"
 INCLUDE "set_hiernumlevels.if"
 INCLUDE "set_hierpartition.if"
 INCLUDE "set_hiermethod.if"
-
-!-------------------------------------------------------------------------
-! Include LB_* interface for backward compatibility.
-
-INCLUDE "lbif.h"
-INCLUDE "set_numgeom.if.lbif"
-INCLUDE "set_geom.if.lbif"
-INCLUDE "set_numedges.if.lbif"
-INCLUDE "set_edgelist.if.lbif"
-INCLUDE "set_numobj.if.lbif"
-INCLUDE "set_objlist.if.lbif"
-INCLUDE "set_firstobj.if.lbif"
-INCLUDE "set_nextobj.if.lbif"
-INCLUDE "set_numborderobj.if.lbif"
-INCLUDE "set_borderobjlist.if.lbif"
-INCLUDE "set_firstborderobj.if.lbif"
-INCLUDE "set_nextborderobj.if.lbif"
-INCLUDE "set_premigrate.if.lbif"
-INCLUDE "set_midmigrate.if.lbif"
-INCLUDE "set_postmigrate.if.lbif"
-INCLUDE "set_objsize.if.lbif"
-INCLUDE "set_packobj.if.lbif"
-INCLUDE "set_unpackobj.if.lbif"
-INCLUDE "set_numcoarseobj.if.lbif"
-INCLUDE "set_coarseobjlist.if.lbif"
-INCLUDE "set_firstcoarseobj.if.lbif"
-INCLUDE "set_nextcoarseobj.if.lbif"
-INCLUDE "set_numchild.if.lbif"
-INCLUDE "set_childlist.if.lbif"
-INCLUDE "set_childweight.if.lbif"
-
 
 contains
 
@@ -2291,36 +2251,5 @@ INCLUDE "set_fixedobjlist.fn"
 INCLUDE "set_hiernumlevels.fn"
 INCLUDE "set_hierpartition.fn"
 INCLUDE "set_hiermethod.fn"
-
-!-------------------------------------------------------------------------
-! Include LB_* interface for backward compatibility.
-!-------------------------------------------------------------------------
-
-INCLUDE "lbfn.h"
-INCLUDE "set_numgeom.fn.lbfn"
-INCLUDE "set_geom.fn.lbfn"
-INCLUDE "set_numedges.fn.lbfn"
-INCLUDE "set_edgelist.fn.lbfn"
-INCLUDE "set_numobj.fn.lbfn"
-INCLUDE "set_objlist.fn.lbfn"
-INCLUDE "set_firstobj.fn.lbfn"
-INCLUDE "set_nextobj.fn.lbfn"
-INCLUDE "set_numborderobj.fn.lbfn"
-INCLUDE "set_borderobjlist.fn.lbfn"
-INCLUDE "set_firstborderobj.fn.lbfn"
-INCLUDE "set_nextborderobj.fn.lbfn"
-INCLUDE "set_premigrate.fn.lbfn"
-INCLUDE "set_midmigrate.fn.lbfn"
-INCLUDE "set_postmigrate.fn.lbfn"
-INCLUDE "set_objsize.fn.lbfn"
-INCLUDE "set_packobj.fn.lbfn"
-INCLUDE "set_unpackobj.fn.lbfn"
-INCLUDE "set_numcoarseobj.fn.lbfn"
-INCLUDE "set_coarseobjlist.fn.lbfn"
-INCLUDE "set_firstcoarseobj.fn.lbfn"
-INCLUDE "set_nextcoarseobj.fn.lbfn"
-INCLUDE "set_numchild.fn.lbfn"
-INCLUDE "set_childlist.fn.lbfn"
-INCLUDE "set_childweight.fn.lbfn"
 
 end module zoltan

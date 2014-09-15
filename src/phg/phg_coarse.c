@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2000,2001,2002, Sandia National Laboratories.               *
- * For more info, see the README file in the top-level Zoltan directory.     *
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 #ifdef __cplusplus
 /* if C++, define the rest of this header file as extern C */
 extern "C" {
@@ -37,82 +70,6 @@ extern "C" {
 #define BITSET(data, elem)       ((data)[(elem) >> 5] |=( 1 << ((elem) & 31)))
 #define BITCHECK(data, elem)     ((data)[(elem) >> 5] & (1 << ((elem) & 31)))
     
-/* UVC:
-   Following quicksort routines are modified from
-   Numerical Recipes Software
-   these versions of quicksort seems to perform
-   better than the ones that exist in Zoltan
-*/
-    
-#define SWAP(a,b) {temp=(a);(a)=(b);(b)=temp;}
-
-#define M             7
-#define NSTACK        50
-
-
-static void uqsorti(int n, int *arr)
-{
-    int         i, ir=n, j, k, l=1;
-    int         jstack=0, istack[NSTACK];
-    int         temp;
-    int a;
-    
-    --arr;
-    for (;;) {
-        if (ir-l < M) {
-            for (j=l+1;j<=ir;j++) {
-                a=arr[j];
-                for (i=j-1;i>=1;i--) {
-                    if (arr[i] <= a) 
-                        break;
-                    arr[i+1] = arr[i];
-                }
-                arr[i+1]=a;
-            }
-            if (jstack == 0) 
-                break;
-            ir=istack[jstack--];
-            l=istack[jstack--];
-        } else {
-            k=(l+ir) >> 1;
-            SWAP(arr[k],arr[l+1]);
-            if (arr[l+1] > arr[ir]) 
-                SWAP(arr[l+1], arr[ir]);
-            if (arr[l] > arr[ir]) 
-                SWAP(arr[l], arr[ir]);
-            if (arr[l+1] > arr[l]) 
-                SWAP(arr[l+1], arr[l]);
-            i=l+1;
-            j=ir;
-            a=arr[l];
-            for (;;) {
-                do i++; while (arr[i] < a);
-                do j--; while (arr[j] > a);
-                if (j < i) break;
-                SWAP(arr[i], arr[j]);
-            }
-            arr[l]=arr[j];
-            arr[j]=a;
-            jstack += 2;
-            if (jstack > NSTACK) 
-                errexit("uqsort: NSTACK too small in sort.");
-            if (ir-i+1 >= j-l) {
-                istack[jstack]=ir;
-                istack[jstack-1]=i;
-                ir=j-1;
-            } else {
-                istack[jstack]=j-1;
-                istack[jstack-1]=l;
-                l=i;
-            }
-        }
-    }
-}
-
-
-#undef M
-#undef NSTACK
-#undef SWAP
 
 static unsigned int hashValue(HGraph *hg, int n, int *ar)
 {
@@ -178,7 +135,7 @@ int Zoltan_PHG_Coarsening
   ZOLTAN_GNO_TYPE *gnoptr;
   int *intptr;
   float *floatptr;
-  double *doubleptr;
+  double *doubleptr = NULL;
   MPI_Datatype zoltan_gno_mpi_type;
   struct phg_timer_indices *timer = NULL;
   int time_details;
@@ -545,9 +502,6 @@ if (VTX_LNO_TO_GNO(hg, i) == 35 || VTX_LNO_TO_GNO(hg, i) == 65 || VTX_LNO_TO_GNO
 
     lno = (int)LevelMap[lno];
     if (hg->nDim) {
-#ifdef KDDKDD_DEBUG
-if (gnoptr[0] == 35 || gnoptr[0] == 65 || gnoptr[0] == 66) printf("%d RECEIVED %d (%f %f %f) into lno %d coorcount %f doublptr %x\n", zz->Proc, gnoptr[0], *doubleptr, *(doubleptr+1), *(doubleptr+2), lno, coorcount[lno]+1., doubleptr);
-#endif
       for (j = 0; j < hg->nDim; j++){
         /* NOTE:  This code must preceed accumulation of vwgt below so that 
          * floatptr is correct. */
@@ -641,9 +595,7 @@ if (gnoptr[0] == 35 || gnoptr[0] == 65 || gnoptr[0] == 66) printf("%d RECEIVED %
           }
       }          
       /* in qsort start and end indices are inclusive */
-      /*    Zoltan_quicksort_list_inc_int(&c_hg->hvertex[sidx], 0, idx-sidx-1); */
-      /* UVC my qsort code is a little bit faster :) */
-      uqsorti(idx-sidx, &c_hg->hvertex[sidx]);
+      Zoltan_quicksort_list_inc_one_int(&c_hg->hvertex[sidx], 0, idx-sidx-1);
   }
   c_hg->hindex[hg->nEdge] = c_hg->nPins = idx;
 

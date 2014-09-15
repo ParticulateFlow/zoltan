@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2000,2001,2002, Sandia National Laboratories.               *
- * For more info, see the README file in the top-level Zoltan directory.     *  
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 #ifdef __cplusplus
 /* if C++, define the rest of this header file as extern C */
 extern "C" {
@@ -27,11 +60,34 @@ extern "C" {
    2147483647. 2147483647 will be returned.
  */
 
-#define MAX_PRIME 177
+#define MAX_PRIME 193
     
 int Zoltan_GenPrime(int stopafter, int *prime_num)
 {
-    const static int primes[MAX_PRIME]={2,3,5,7,11,13,17,19,23,29,37,41,47,53,59,67,79,89,101,113,127,149,167,191,211,233,257,283,313,347,383,431,479,541,599,659,727,809,907,1009,1117,1229,1361,1499,1657,1823,2011,2213,2437,2683,2953,3251,3581,3943,4339,4783,5273,5801,6389,7039,7753,8537,9391,10331,11369,12511,13763,15149,16673,18341,20177,22229,24469,26921,29629,32603,35869,39461,43411,47777,52561,57829,63617,69991,76991,84691,93169,102497,112757,124067,136481,150131,165161,181693,199873,219871,241861,266051,292661,321947,354143,389561,428531,471389,518533,570389,627433,690187,759223,835207,918733,1010617,1111687,1222889,1345207,1479733,1627723,1790501,1969567,2166529,2383219,2621551,2883733,3172123,3489347,3838283,4222117,4644329,5108767,5619667,6181639,6799811,7479803,8227787,9050599,9955697,10951273,12046403,13251047,14576161,16033799,17637203,19400929,21341053,23475161,25822679,28404989,31245491,34370053,37807061,41587807,45746593,50321261,55353391,60888739,66977621,73675391,81042947,89147249,98061979,107868203,118655027,130520531,671088667,738197549,812017309,893219059,982540981,1080795091,1188874601,1307762069,1438538293,1582392127,1740631423,1914694651,2106164131,2147483647};
+    static const int primes[MAX_PRIME]=
+        {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 37, 41, 47, 53, 59, 67, 79, 89,
+         101, 113, 127, 149, 167, 191, 211, 233, 257, 283, 313, 347, 383, 431,
+         479, 541, 599, 659, 727, 809, 907, 1009, 1117, 1229, 1361, 1499, 1657,
+         1823, 2011, 2213, 2437, 2683, 2953, 3251, 3581, 3943, 4339, 4783,
+         5273, 5801, 6389, 7039, 7753, 8537, 9391, 10331, 11369, 12511, 13763,
+         15149, 16673, 18341, 20177, 22229, 24469, 26921, 29629, 32603, 35869,
+         39461, 43411, 47777, 52561, 57829, 63617, 69991, 76991, 84691, 93169,
+         102497, 112757, 124067, 136481, 150131, 165161, 181693, 199873,
+         219871, 241861, 266051, 292661, 321947, 354143, 389561, 428531,
+         471389, 518533, 570389, 627433, 690187, 759223, 835207, 918733,
+         1010617, 1111687, 1222889, 1345207, 1479733, 1627723, 1790501,
+         1969567, 2166529, 2383219, 2621551, 2883733, 3172123, 3489347,
+         3838283, 4222117, 4644329, 5108767, 5619667, 6181639, 6799811,
+         7479803, 8227787, 9050599, 9955697, 10951273, 12046403, 13251047,
+         14576161, 16033799, 17637203, 19400929, 21341053, 23475161, 25822679,
+         28404989, 31245491, 34370053, 37807061, 41587807, 45746593, 50321261,
+         55353391, 60888739, 66977621, 73675391, 81042947, 89147249, 98061979,
+         107868203, 118655027, 130520531, 143572609, 157929907, 173722907,
+         191095213, 210204763, 231225257, 254347801, 279782593, 307760897,
+         338536987, 372390691, 409629809, 450592801, 495652109, 545217341,
+         599739083, 659713007, 725684317, 798252779, 878078057, 965885863,
+         1062474559, 1168722059, 1285594279, 1414153729, 1555569107,
+         1711126033, 1882238639, 2070462533, 2147483647};
 
     int uplimit=MAX_PRIME-1;
     int botlimit=0;
@@ -62,7 +118,7 @@ int Zoltan_G2LHash_Create(G2LHash *hash, int maxsize, ZOLTAN_GNO_TYPE base, int 
 
     if (Zoltan_GenPrime(maxsize , &(hash->maxsize))==ZOLTAN_MEMERR)
       return ZOLTAN_MEMERR;
-    
+
     hash->table = NULL;
     hash->nodes = NULL;
     hash->base = base;
@@ -70,8 +126,8 @@ int Zoltan_G2LHash_Create(G2LHash *hash, int maxsize, ZOLTAN_GNO_TYPE base, int 
     hash->nlvtx = nlvtx;
     hash->size = 0;
     hash->num_gid_entries = sizeof(ZOLTAN_GNO_TYPE) / sizeof(ZOLTAN_ID_TYPE);
-    hash->table = (G2LHashNode **) ZOLTAN_CALLOC(hash->maxsize, sizeof(G2LHashNode *));
-    hash->nodes = (G2LHashNode *) ZOLTAN_MALLOC(hash->maxsize * sizeof(G2LHashNode));
+    hash->table = (G2LHashNode **) ZOLTAN_CALLOC((size_t) hash->maxsize, sizeof(G2LHashNode *));
+    hash->nodes = (G2LHashNode *) ZOLTAN_MALLOC((size_t) hash->maxsize * (size_t) sizeof(G2LHashNode));
     if (!hash->table || !hash->nodes) {
         Zoltan_G2LHash_Destroy(hash);
         return ZOLTAN_MEMERR;

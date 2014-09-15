@@ -1,15 +1,48 @@
- /*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2000,2001,2002, Sandia National Laboratories.               *
- * For more info, see the README file in the top-level Zoltan directory.     *
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 #ifdef __cplusplus
 /* if C++, define the rest of this header file as extern C */
 extern "C" {
@@ -349,6 +382,7 @@ int Zoltan_Color(
   times[2] = Zoltan_Time(zz->Timer);
 #endif
 
+KDDKDDKDD(zz->Proc, "Coloring Hash");
   if (nvtx && !(local_GNOs = (ZOLTAN_GNO_TYPE *) ZOLTAN_MALLOC(nvtx * sizeof(ZOLTAN_GNO_TYPE))))
       MEMORY_ERROR;
   for (i=0; i<nvtx; ++i)
@@ -378,6 +412,7 @@ int Zoltan_Color(
     }
   }
 
+KDDKDDKDD(zz->Proc, "Coloring DD");
   /* lastlno is the total number of local and d1 neighbors */
   lastlno = nvtx+hash.size;
 
@@ -392,7 +427,7 @@ int Zoltan_Color(
 	  MEMORY_ERROR;
 
       ierr = Zoltan_DD_Create (&dd_color, zz->Communicator, 
-                               sizeof(ZOLTAN_GNO_TYPE)/sizeof(ZOLTAN_ID_TYPE), 0, 0, 0, 0);
+                               sizeof(ZOLTAN_GNO_TYPE)/sizeof(ZOLTAN_ID_TYPE), 0, 0, sz, 0);
       if (ierr != ZOLTAN_OK)
           ZOLTAN_COLOR_ERROR(ierr, "Cannot construct DDirectory.");
       /* Put req obs with 1 but first inialize the rest with 0 */
@@ -419,6 +454,7 @@ int Zoltan_Color(
   times[3] = Zoltan_Time(zz->Timer);
 #endif
   /* Select Coloring algorithm and perform the coloring */
+KDDKDDKDD(zz->Proc, "Coloring D1");
   if (coloring_problem == '1')
       D1coloring(zz, coloring_problem, coloring_order, coloring_method, comm_pattern, ss, nvtx, &hash, xadj, (int *)adjncy, adjproc, color,
 		 recoloring_permutation, recoloring_type, recoloring_num_of_iterations);
@@ -428,8 +464,9 @@ int Zoltan_Color(
   times[4] = Zoltan_Time(zz->Timer);
 #endif
 
+KDDKDDKDD(zz->Proc, "Coloring Result");
    ierr = Zoltan_DD_Create (&dd_color, zz->Communicator, 
-                            sizeof(ZOLTAN_GNO_TYPE)/sizeof(ZOLTAN_ID_TYPE), 0, 0, 0, 0);
+                            sizeof(ZOLTAN_GNO_TYPE)/sizeof(ZOLTAN_ID_TYPE), 0, 0, nvtx, 0);
    if (ierr != ZOLTAN_OK)
        ZOLTAN_COLOR_ERROR(ierr, "Cannot construct DDirectory.");
    /* Put color in part field. */
@@ -447,6 +484,7 @@ int Zoltan_Color(
    /* Free DDirectory */
    Zoltan_DD_Destroy(&dd_color);
    ZOLTAN_FREE(&my_global_ids); 
+KDDKDDKDD(zz->Proc, "Coloring Done");
 
 #ifdef _DEBUG_TIMES    
   MPI_Barrier(zz->Communicator);

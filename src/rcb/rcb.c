@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2000,2001,2002, Sandia National Laboratories.               *
- * For more info, see the README file in the top-level Zoltan directory.     *  
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 
 
 #ifdef __cplusplus
@@ -28,6 +61,7 @@ extern "C" {
 #include "ha_const.h"
 #include "par_median_const.h"
 #include "par_bisect_const.h"
+#include "rcb_params.h"
 
 /* Recursive coordinate bisectioning (RCB) routine
    operates on "dots" as defined in shared_const.h
@@ -102,32 +136,10 @@ static int serial_rcb(ZZ *, struct Dot_Struct *, int *, int *, int, int,
   struct rcb_box *, double *, int, int, int *, int *, int, int, int, int,
   int, int, int, int, int, int, int, int, MPI_Op, MPI_Datatype,
   int, ZOLTAN_GNO_TYPE *, struct rcb_tree *, int *, int, double *, double *,
-  float *, double *, int, int, double);
+  float *, double *, int, int, double, double *);
 static void compute_RCB_box(struct rcb_box *, int, struct Dot_Struct *, int *,
   MPI_Op, MPI_Datatype, MPI_Comm, int, int, int, int);
 
-/*****************************************************************************/
-/*  Parameters structure for RCB method.  Used in  */
-/*  Zoltan_RCB_Set_Param and Zoltan_RCB.                   */
-static PARAM_VARS RCB_params[] = {
-                  { "RCB_OVERALLOC", NULL, "DOUBLE", 0 },
-                  { "RCB_REUSE", NULL, "INT", 0 },
-                  { "CHECK_GEOM", NULL, "INT", 0 },
-                  { "RCB_OUTPUT_LEVEL", NULL, "INT", 0 },
-                  { "KEEP_CUTS", NULL, "INT", 0 },
-                  { "RCB_LOCK_DIRECTIONS", NULL, "INT", 0 },
-                  { "RCB_SET_DIRECTIONS", NULL, "INT", 0 },
-                  { "RCB_RECTILINEAR_BLOCKS", NULL, "INT", 0 },
-                  { "OBJ_WEIGHTS_COMPARABLE", NULL, "INT", 0 },
-                  { "RCB_MULTICRITERIA_NORM", NULL, "INT", 0 },
-                  { "RCB_MAX_ASPECT_RATIO", NULL, "DOUBLE", 0 },
-                  { "AVERAGE_CUTS", NULL, "INT", 0 },
-                  { "RANDOM_PIVOTS", NULL, "INT", 0 },
-                  { "RCB_RECOMPUTE_BOX", NULL, "INT", 0 },
-                  { "REDUCE_DIMENSIONS", NULL, "INT", 0 },
-                  { "DEGENERATE_RATIO", NULL, "DOUBLE", 0 },
-                  {"FINAL_OUTPUT",      NULL,  "INT",    0},
-                  { NULL, NULL, NULL, 0 } };
 /*****************************************************************************/
 
 /*---------------------------------------------------------------------------*/
@@ -260,6 +272,9 @@ int Zoltan_RCB(
 
     Zoltan_Assign_Param_Vals(zz->Params, RCB_params, zz->Debug_Level, zz->Proc,
                          zz->Debug_Proc);
+
+    /* Need to keep the tree if reuse or reuse_dir, so turn gen_tree on. */
+    if (reuse || reuse_dir) gen_tree = 1;
 
     /* Initializations in case of early exit. */
     *num_import = -1;
@@ -507,7 +522,7 @@ static int rcb_fn(
 
   start_time = Zoltan_Time(zz->Timer);
   ierr = Zoltan_RCB_Build_Structure(zz, &pdotnum, &dotmax, wgtflag, overalloc,
-                                    use_ids);
+                                    use_ids, gen_tree);
 
   if (ierr < 0) {
     ZOLTAN_PRINT_ERROR(proc, yo, "Error returned from Zoltan_RCB_Build_Structure.");
@@ -589,10 +604,8 @@ static int rcb_fn(
     dotlist = NULL;
   }
 
-  /* if reuse is turned on, turn on gen_tree since it is needed. */
   /* Also, if this is not first time through, send dots to previous proc. */
   if (reuse) {
-    gen_tree = 1;
     dotpt  = &rcb->Dots; 
     pt[1] = pt[2] = 0;
 
@@ -733,11 +746,9 @@ static int rcb_fn(
   }
 
 
-  /* if reuse_dir is turned on, turn on gen_tree since it is needed. */
   /* Also, if this is not first time through, set lock_direction to reuse
      the directions determined previously */
   if (reuse_dir) {
-     gen_tree = 1;
      if (treept[0].dim != -1)
         lock_direction = 1;
   }
@@ -764,9 +775,11 @@ static int rcb_fn(
   root = 0;
   old_set = 1;
   ierr = Zoltan_LB_Proc_To_Part(zz, proc, &np, &fp);
-  for (i = fp; i < (fp + np); i++) {
-    treept[i].parent = 0;
-    treept[i].left_leaf = 0;
+  if (treept) {
+    for (i = fp; i < (fp + np); i++) {
+      treept[i].parent = 0;
+      treept[i].left_leaf = 0;
+    }
   }
   if (zz->Tflops_Special) {
     proclower = 0;
@@ -998,7 +1011,7 @@ static int rcb_fn(
        only removing low-numbered processors (proclower to procmid-1) that
        have no parts in them from the processors remaining to 
        be partitioned. */
-    if (partmid > 0 && partmid == fp) {
+    if (treept && partmid > 0 && partmid == fp) {
       treept[partmid].dim = dim;
       treept[partmid].cut = valuehalf;
       treept[partmid].parent = old_set ? -(root+1) : root+1;
@@ -1127,7 +1140,7 @@ static int rcb_fn(
                box_op, box_type, average_cuts, 
                counters, treept, dim_spec, level,
                coord, wgts, part_sizes, wgtscale, rcb->Num_Dim, pivot_choice, 
-               max_aspect_ratio);
+               max_aspect_ratio, timers);
     if (ierr < 0) {
       ZOLTAN_PRINT_ERROR(proc, yo, "Error returned from serial_rcb");
       goto End;
@@ -1245,11 +1258,8 @@ EndReporting:
     ZOLTAN_FREE(&displ);
     ZOLTAN_FREE(&treetmp);
   }
-  else {
-    treept[0].dim = -1;
-  }
 
-  if (zz->Debug_Level >= ZOLTAN_DEBUG_ALL)
+  if (treept && zz->Debug_Level >= ZOLTAN_DEBUG_ALL)
     print_rcb_tree(zz, np, fp, &(treept[fp]));
 
   end_time = Zoltan_Time(zz->Timer);
@@ -1257,7 +1267,7 @@ EndReporting:
 
   if (stats || (zz->Debug_Level >= ZOLTAN_DEBUG_ATIME)) 
     Zoltan_RB_stats(zz, timestop-timestart,&rcb->Dots,dotnum,part_sizes,
-                timers,counters,stats,reuse_count,rcbbox,reuse);
+                    timers,counters,stats,reuse_count,rcbbox,reuse);
 
   if (zz->Debug_Level >= ZOLTAN_DEBUG_ATIME) {
     if (zz->Proc == zz->Debug_Proc) {
@@ -1544,7 +1554,8 @@ static int serial_rcb(
                                 scaling factors for each weight dimension. */
   int ndim,                  /* number of geometric dimensions */
   int pivot_choice, 
-  double max_aspect_ratio 
+  double max_aspect_ratio,
+  double timers[]            /* as in rcb_fn */
 )
 {
   char *yo = "serial_rcb";
@@ -1571,6 +1582,7 @@ static int serial_rcb(
   double max_box;                   /* largest length of bbox */
   double *c, *w;
   double uniformWeight;
+  double start_time=0., end_time;
 
   wgtdim = (wgtflag>0 ? wgtflag : 1);
 
@@ -1579,6 +1591,9 @@ static int serial_rcb(
       dotpt->Part[dindx[i]] = partlower;
   }
   else {
+    if (stats || (zz->Debug_Level >= ZOLTAN_DEBUG_ATIME)) 
+      start_time = Zoltan_Time(zz->Timer);
+
     ierr = Zoltan_Divide_Parts(zz, zz->Obj_Weight_Dim, part_sizes, num_parts,
                                &partlower, &partmid, fractionlo);
 
@@ -1655,6 +1670,12 @@ static int serial_rcb(
         first_guess = 1;
       }
       else first_guess = 0;
+
+      if (stats || (zz->Debug_Level >= ZOLTAN_DEBUG_ATIME)) {
+        end_time = Zoltan_Time(zz->Timer);
+        timers[1] += end_time - start_time;
+        start_time = end_time;
+      }
   
       if (wgtflag <= 1){
         /* Call find_median with Tflops_Special == 0; avoids communication */
@@ -1757,13 +1778,15 @@ static int serial_rcb(
     }
 
     /* By now, we have the right values for the best cut. */
-    treept[partmid].dim = dim;
-    treept[partmid].cut = valuehalf;
-    treept[partmid].parent = old_set ? -(root+1) : root+1;
-    /* The following two will get overwritten when the information is
-       assembled if this is not a terminal cut */
-    treept[partmid].left_leaf = -partlower;
-    treept[partmid].right_leaf = -partmid;
+    if (gen_tree) {
+      treept[partmid].dim = dim;
+      treept[partmid].cut = valuehalf;
+      treept[partmid].parent = old_set ? -(root+1) : root+1;
+      /* The following two will get overwritten when the information is
+         assembled if this is not a terminal cut */
+      treept[partmid].left_leaf = -partlower;
+      treept[partmid].right_leaf = -partmid;
+    }
 
     root = partmid;
 
@@ -1775,6 +1798,11 @@ static int serial_rcb(
         tmpdindx[--set1] = dindx[i];
     }
     memcpy(dindx, tmpdindx, dotnum * sizeof(int));
+
+    if (stats || (zz->Debug_Level >= ZOLTAN_DEBUG_ATIME)) {
+      end_time = Zoltan_Time(zz->Timer);
+      timers[2] += end_time - start_time;
+    }
 
     /* If set 0 has at least one part and at least one dot,
      * call serial_rcb for set 0 */
@@ -1791,8 +1819,8 @@ static int serial_rcb(
                         recompute_box,
                         box_op, box_type, average_cuts, 
                         counters, treept, dim_spec, level,
-                        coord, wgts, part_sizes, wgtscale, ndim, pivot_choice,   
-                        max_aspect_ratio);
+                        coord, wgts, part_sizes, wgtscale, ndim, pivot_choice,
+                        max_aspect_ratio, timers);
       if (ierr < 0) {
         goto End;
       }
@@ -1813,7 +1841,7 @@ static int serial_rcb(
                         box_op, box_type, average_cuts,
                         counters, treept, dim_spec, level,
                         coord, wgts, part_sizes, wgtscale, ndim, pivot_choice,
-                        max_aspect_ratio);
+                        max_aspect_ratio, timers);
       if (ierr < 0) {
         goto End;
       }

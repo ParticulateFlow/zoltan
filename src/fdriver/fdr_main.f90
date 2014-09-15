@@ -1,14 +1,48 @@
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Zoltan Library for Parallel Applications                                   !
-! For more info, see the README file in the top-level Zoltan directory.      ! 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  CVS File Information :
-!     $RCSfile$
-!     $Author$
-!     $Date$
-!     Revision$
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! 
+!! @HEADER
+!!
+!!!!**********************************************************************
+!!
+!!  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+!!                  Copyright 2012 Sandia Corporation
+!!
+!! Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+!! the U.S. Government retains certain rights in this software.
+!!
+!! Redistribution and use in source and binary forms, with or without
+!! modification, are permitted provided that the following conditions are
+!! met:
+!!
+!! 1. Redistributions of source code must retain the above copyright
+!! notice, this list of conditions and the following disclaimer.
+!!
+!! 2. Redistributions in binary form must reproduce the above copyright
+!! notice, this list of conditions and the following disclaimer in the
+!! documentation and/or other materials provided with the distribution.
+!!
+!! 3. Neither the name of the Corporation nor the names of the
+!! contributors may be used to endorse or promote products derived from
+!! this software without specific prior written permission.
+!!
+!! THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+!! EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+!! IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+!! PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+!! CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+!! EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+!! PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+!! PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+!! LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+!! NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+!! SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+!!
+!! Questions? Contact Karen Devine	kddevin@sandia.gov
+!!                    Erik Boman	egboman@sandia.gov
+!!
+!!!!**********************************************************************
+!!
+!! @HEADER
+ !!
 
 !/*--------------------------------------------------------------------------*/
 !/* Purpose: Driver for dynamic load-balance library, ZOLTAN.                */
@@ -356,12 +390,6 @@ type(ELEM_INFO), pointer :: elements(:)
    integer :: fp
    end subroutine echo_cmd_file
 
-!   subroutine sort_index(n, ra, indx)
-!   use zoltan
-!   integer(Zoltan_INT) :: n
-!   integer(Zoltan_INT) :: ra(0:)
-!   integer(Zoltan_INT) :: indx(0:)
-!   end subroutine sort_index
   end interface
 
 !/***************************** BEGIN EXECUTION ******************************/
@@ -409,7 +437,7 @@ type(ELEM_INFO), pointer :: elements(:)
     endif
   end do
 
-  call dr_sort_index(Mesh%num_elems, global_ids, index)
+  call dr_sort_index(0, Mesh%num_elems-1, global_ids, index)
 
 !  /* generate the parallel filename for this processor */
   ctemp = pio_info%pexo_fname(1:len_trim(pio_info%pexo_fname))//".out"
@@ -436,63 +464,6 @@ type(ELEM_INFO), pointer :: elements(:)
 
   output_results = .true.
 end function output_results
-
-!/*****************************************************************************/
-!subroutine sort_index(n, ra, indx)
-!use zoltan
-!integer(Zoltan_INT) :: n
-!integer(Zoltan_INT) :: ra(0:)
-!integer(Zoltan_INT) :: indx(0:)
-!
-!!/*
-!!*       Numerical Recipies in C source code
-!!*       modified to have first argument an integer array
-!!*
-!!*       Sorts the array ra[0,..,(n-1)] in ascending numerical order using
-!!*       heapsort algorithm.
-!!*
-!!*/
-!
-!integer(Zoltan_INT) :: l, j, ir, i
-!integer(Zoltan_INT) :: rra, irra
-!!  /*
-!!   *  No need to sort if one or fewer items.
-!!   */
-!if (n <= 1) return
-!
-!l=n/2
-!ir=n-1
-!do
-!    if (l > 0) then
-!      l = l-1
-!      rra=ra(indx(l))
-!      irra=indx(l)
-!    else
-!      rra=ra(indx(ir))
-!      irra=indx(ir)
-!
-!      indx(ir)=indx(0)
-!      ir = ir-1
-!      if (ir == 0) then
-!        indx(0)=irra
-!        return
-!      endif
-!    endif
-!    i=l
-!    j=2*l+1
-!    do while (j <= ir)
-!      if (j < ir .and. ra(indx(j)) < ra(indx(j+1))) j = j+1
-!      if (rra < ra(indx(j))) then
-!        indx(i)=indx(j)
-!        i = j
-!        j = j+i+1
-!      else
-!        j=ir+1
-!      endif
-!    end do
-!    indx(i)=irra
-!  end do
-!end subroutine sort_index
 
 !************************************************************************
 subroutine echo_cmd_file(fp, cmd_file)

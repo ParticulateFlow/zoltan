@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2000,2001,2002, Sandia National Laboratories.               *
- * For more info, see the README file in the top-level Zoltan directory.     *  
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision: 1.6.2.2 $
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 
 
 #ifdef __cplusplus
@@ -27,6 +60,7 @@ extern "C" {
 #include "params_const.h"
 #include "ha_const.h"
 #include "par_median_const.h"
+#include "rib_params.h"
 
 /* Inertial recursive bisection (RIB) load balancing routine operates on
    "dots" as defined in shared_const.h */
@@ -56,22 +90,7 @@ static int compute_rib_direction(ZZ *, int, int, double *, double *,
   MPI_Comm, int, int, int);
 static int serial_rib(ZZ *, struct Dot_Struct *, int *, int *, int, int,
   int, double, int, int, int *, int *, int, int, int, int, int, int, int,
-  struct rib_tree *, double *, double *, float *);
-
-/*---------------------------------------------------------------------------*/
-/*  Parameters structure for RIB method.  Used in  */
-/*  Zoltan_RIB_Set_Param and Zoltan_RIB.                      */
-static PARAM_VARS RIB_params[] = {
-               { "RIB_OVERALLOC", NULL, "DOUBLE", 0 },
-               { "CHECK_GEOM", NULL, "INT", 0 },
-               { "RIB_OUTPUT_LEVEL", NULL, "INT", 0 },
-               { "AVERAGE_CUTS", NULL, "INT", 0 },
-               { "KEEP_CUTS", NULL, "INT", 0 },
-               { "REDUCE_DIMENSIONS", NULL, "INT", 0 },
-               { "DEGENERATE_RATIO", NULL, "DOUBLE", 0 },
-               {"FINAL_OUTPUT", NULL,  "INT",    0},
-
-               { NULL, NULL, NULL, 0 } };
+  struct rib_tree *, double *, double *, float *, double *);
 
 /*---------------------------------------------------------------------------*/
 
@@ -336,7 +355,7 @@ static int rib_fn(
 
   start_time = Zoltan_Time(zz->Timer);
   ierr = Zoltan_RIB_Build_Structure(zz, &pdotnum, &dotmax, wgtflag, overalloc,
-                                    use_ids);
+                                    use_ids, gen_tree);
   if (ierr < 0) {
     ZOLTAN_PRINT_ERROR(proc, yo, 
       "Error returned from Zoltan_RIB_Build_Structure.");
@@ -392,7 +411,7 @@ static int rib_fn(
                                            import_procs, import_to_part);
     if (ierr < 0) {
        ZOLTAN_PRINT_ERROR(proc,yo,
-                          "Error returned from Zoltan_RB_Return_Arguments.");
+                        "Error returned from Zoltan_RB_Candidates_Copy_Input.");
        goto End;
     }
   }
@@ -468,9 +487,11 @@ static int rib_fn(
   root = 0;
   old_set = 1;
   ierr = Zoltan_LB_Proc_To_Part(zz, proc, &np, &fp);
-  for (i = fp; i < (fp + np); i++) {
-    treept[i].parent = 0;
-    treept[i].left_leaf = 0;
+  if (treept) {
+    for (i = fp; i < (fp + np); i++) {
+      treept[i].parent = 0;
+      treept[i].left_leaf = 0;
+    }
   }
   if (zz->Tflops_Special) {
     proclower = 0;
@@ -480,6 +501,9 @@ static int rib_fn(
 
   while ((num_parts > 1 && num_procs > 1) || 
          (zz->Tflops_Special && tfs[0] > 1 && tfs[1] > 1)) {
+
+    if (stats || (zz->Debug_Level >= ZOLTAN_DEBUG_ATIME)) 
+      time1 = Zoltan_Time(zz->Timer);
 
     ierr = Zoltan_Divide_Machine(zz, zz->Obj_Weight_Dim, part_sizes, 
                                  proc, local_comm, &set, 
@@ -567,7 +591,7 @@ static int rib_fn(
        have no parts in them from the processors remaining to 
        be partitioned. */
 
-    if (partmid > 0 && partmid == fp) {
+    if (treept && partmid > 0 && partmid == fp) {
       treept[partmid].cm[0] = cm[0];
       treept[partmid].cm[1] = cm[1];
       treept[partmid].cm[2] = cm[2];
@@ -642,6 +666,9 @@ static int rib_fn(
      most notably when a processor has zero parts on it, but still has
      some dots after the parallel partitioning. */
 
+  if (stats || (zz->Debug_Level >= ZOLTAN_DEBUG_ATIME)) 
+    time1 = Zoltan_Time(zz->Timer);
+
   ierr = Zoltan_RB_Send_To_Part(zz, &(rib->Global_IDs), &(rib->Local_IDs),
                                &(rib->Dots), &dotmark, &dottop,
                                &dotnum, &dotmax, &allocflag, overalloc,
@@ -652,6 +679,10 @@ static int rib_fn(
                        "Error returned from Zoltan_RB_Send_To_Part");
     goto End;
   }
+
+  if (stats || (zz->Debug_Level >= ZOLTAN_DEBUG_ATIME)) 
+    timers[3] += (Zoltan_Time(zz->Timer) - time1);
+  
 
   /* All dots are now on the processors they will end up on; now generate
    * more parts if needed. */
@@ -681,7 +712,7 @@ static int rib_fn(
                       &(dindx[0]), &(tmpdindx[0]), partlower,
                       proc, wgtflag, stats, gen_tree,
                       rectilinear_blocks, average_cuts,
-                      treept, value, wgts, part_sizes);
+                      treept, value, wgts, part_sizes, timers);
     if (ierr < 0) {
       ZOLTAN_PRINT_ERROR(proc, yo, "Error returned from serial_rib");
       goto End;
@@ -772,7 +803,7 @@ EndReporting:
 					memory in MPI_Allgatherv */
 
     treetmp = (struct rib_tree *)
-	       ZOLTAN_MALLOC(zz->LB.Num_Global_Parts* sizeof(struct rib_tree));
+	       ZOLTAN_MALLOC(zz->LB.Num_Global_Parts * sizeof(struct rib_tree));
     displ = (int *) ZOLTAN_MALLOC(2 * zz->Num_Proc * sizeof(int));
     if (!displ || !treetmp) {
       ZOLTAN_PRINT_ERROR(zz->Proc, yo, "Memory error.");
@@ -802,11 +833,8 @@ EndReporting:
     ZOLTAN_FREE(&displ);
     ZOLTAN_FREE(&treetmp);
   }
-  else {
-    treept[0].right_leaf = -1;
-  }
 
-  if (zz->Debug_Level >= ZOLTAN_DEBUG_ALL)
+  if (treept && zz->Debug_Level >= ZOLTAN_DEBUG_ALL)
     print_rib_tree(zz, np, fp, &(treept[fp]));
 
   end_time = Zoltan_Time(zz->Timer);
@@ -1048,9 +1076,10 @@ static int serial_rib(
   struct rib_tree *treept,   /* tree of RCB cuts */
   double *value,             /* temp array for median_find */
   double *wgts,              /* temp array for serial_rib */
-  float *part_sizes          /* Array of size zz->LB.Num_Global_Parts
+  float *part_sizes,         /* Array of size zz->LB.Num_Global_Parts
                                 containing the percentage of work to be
                                 assigned to each part.               */
+  double timers[]            /* as in rib_fn */
 )
 {
 char *yo = "serial_rib";
@@ -1066,12 +1095,17 @@ double cm[3];                 /* Center of mass of objects */
 double evec[3];               /* Eigenvector defining direction */
 int set0, set1;
 int i;
+double start_time=0., end_time;
 
   if (num_parts == 1) {
     for (i = 0; i < dotnum; i++)
       dotpt->Part[dindx[i]] = partlower;
   }
   else {
+
+    if (stats || (zz->Debug_Level >= ZOLTAN_DEBUG_ATIME)) 
+      start_time = Zoltan_Time(zz->Timer);
+
     ierr = Zoltan_Divide_Parts(zz, zz->Obj_Weight_Dim, part_sizes, num_parts,
                                &partlower, &partmid, fractionlo);
 
@@ -1093,6 +1127,11 @@ int i;
         }
       }
     }
+    if (stats || (zz->Debug_Level >= ZOLTAN_DEBUG_ATIME)) {
+      end_time = Zoltan_Time(zz->Timer);
+      timers[1] += end_time - start_time;
+      start_time = end_time;
+    }
 
     if (!Zoltan_RB_find_median(0, value, wgts, dotpt->uniformWeight, dotmark, dotnum, proc, 
                                fractionlo, MPI_COMM_SELF, &valuehalf, 
@@ -1105,18 +1144,20 @@ int i;
       ierr = ZOLTAN_FATAL;
       goto End;
     }
-    treept[partmid].cm[0] = cm[0];
-    treept[partmid].cm[1] = cm[1];
-    treept[partmid].cm[2] = cm[2];
-    treept[partmid].ev[0] = evec[0];
-    treept[partmid].ev[1] = evec[1];
-    treept[partmid].ev[2] = evec[2];
-    treept[partmid].cut = valuehalf;
-    treept[partmid].parent = old_set ? -(root+1) : root+1;
-    /* The following two will get overwritten when the information
-       is assembled if this is not a terminal cut */
-    treept[partmid].left_leaf = -partlower;
-    treept[partmid].right_leaf = -partmid;
+    if (treept) {
+      treept[partmid].cm[0] = cm[0];
+      treept[partmid].cm[1] = cm[1];
+      treept[partmid].cm[2] = cm[2];
+      treept[partmid].ev[0] = evec[0];
+      treept[partmid].ev[1] = evec[1];
+      treept[partmid].ev[2] = evec[2];
+      treept[partmid].cut = valuehalf;
+      treept[partmid].parent = old_set ? -(root+1) : root+1;
+      /* The following two will get overwritten when the information
+         is assembled if this is not a terminal cut */
+      treept[partmid].left_leaf = -partlower;
+      treept[partmid].right_leaf = -partmid;
+    }
 
     root = partmid;
 
@@ -1128,6 +1169,10 @@ int i;
         tmpdindx[--set1] = dindx[i];
     }
     memcpy(dindx, tmpdindx, dotnum * sizeof(int));
+    if (stats || (zz->Debug_Level >= ZOLTAN_DEBUG_ATIME)) {
+      end_time = Zoltan_Time(zz->Timer);
+      timers[2] += (end_time - start_time);
+    }
 
     /* If set 0 has at least one part and at least one dot,
      * call serial_rib for set 0 */
@@ -1138,7 +1183,7 @@ int i;
                         &(dindx[0]), &(tmpdindx[0]), partlower,
                         proc, wgtflag, stats, gen_tree, 
                         rectilinear_blocks, average_cuts,
-                        treept, value, wgts, part_sizes);
+                        treept, value, wgts, part_sizes, timers);
       if (ierr < 0) {
         goto End;
       }
@@ -1153,7 +1198,7 @@ int i;
                         &(dindx[set1]), &(tmpdindx[set1]), partmid,
                         proc, wgtflag, stats, gen_tree,
                         rectilinear_blocks, average_cuts,
-                        treept, value, wgts, part_sizes);
+                        treept, value, wgts, part_sizes, timers);
       if (ierr < 0) {
         goto End;
       }

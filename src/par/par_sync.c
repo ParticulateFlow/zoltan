@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2000,2001,2002, Sandia National Laboratories.               *
- * For more info, see the README file in the top-level Zoltan directory.     *  
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 
 
 #ifdef __cplusplus
@@ -108,9 +141,8 @@ void Zoltan_Print_Sync_End(MPI_Comm communicator, int do_print_line)
  * Author: John Shadid (9221, SNL)
  */
 
-int         flag = 1, from, type, to;
+int         flag = 1, type, to;
 static int  offset = 0;
-MPI_Status  st;
 int proc, num_proc;
 char *yo = "Zoltan_Print_Sync_End";
 char msg[256];
@@ -123,10 +155,16 @@ char msg[256];
   offset = (offset + 1)%100;
   type   = PRINT_SYNC + offset;
 
-  if (proc < num_proc -1)
+  if (proc < num_proc -1) {
     to = proc + 1;
+    if (MPI_Send((void *) &flag, 1, MPI_INT, to, type, communicator) 
+        != MPI_SUCCESS ) {
+      sprintf(msg, "MPI_Send failed, message type %d.", type);
+      ZOLTAN_PRINT_ERROR(proc, yo, msg);
+      exit (-1);
+    }
+  }
   else {
-    to = 0;
     if (do_print_line) {
       printf("\n");
       for (flag = 0; flag < 37; flag++) printf("#");
@@ -136,26 +174,8 @@ char msg[256];
     }
   }
 
-  if (MPI_Send((void *) &flag, 1, MPI_INT, to, type, communicator) 
-      != MPI_SUCCESS ) {
-    sprintf(msg, "MPI_Send failed, message type %d.", type);
-    ZOLTAN_PRINT_ERROR(proc, yo, msg);
-    exit (-1);
-  }
-  if (proc == 0) {
-    from = num_proc -1;
-    if (MPI_Recv((void *) &flag, 1, MPI_INT, from, type, communicator, &st)
-        != MPI_SUCCESS) {
-      sprintf(msg, "MPI_Recv failed, message type %d.", type);
-      ZOLTAN_PRINT_ERROR(proc, yo, msg);
-      exit (-1);
-    }
-  }
-
   /*
-   * Do a final sync among all the processors, so that all of the other
-   * processors must wait for Proc 0 to receive the final message from Proc
-   * (num_proc-1)
+   * Do a final sync among all the processors.
    */
 
   MPI_Barrier(communicator);

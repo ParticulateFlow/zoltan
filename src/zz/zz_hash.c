@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2000,2001,2002, Sandia National Laboratories.               *
- * For more info, see the README file in the top-level Zoltan directory.     *  
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 
 
 #ifdef __cplusplus
@@ -29,15 +62,6 @@ extern "C" {
 /*****************************************************************************/
 /*****************************************************************************/
 
-#ifdef ZZ_NEW_HASH
-/* EBEB Slightly improved hash function that fixes some weaknesses
-        in the old hash function. An unfortunate side effect is
-        that the new hash function changes some answers, therefore
-        we have not yet replaced the old version. We should consider
-        even stronger hash (like MD5) if we think good hashing is
-        very important. 
- */
-
 /* Zoltan_Hash is a hash function for Zoltan ids (local or global). 
  *
  * Input:
@@ -48,8 +72,50 @@ extern "C" {
  *
  * Return value:
  *   the hash value, an unsigned integer between 0 and n-1
- *
- * Algorithm: 
+ */
+
+#ifndef HAVE_ZOLTAN_KNUTH_HASH
+#define ZZ_MURMUR_HASH
+#else
+#define ZZ_KNUTH_HASH
+#endif
+
+#ifdef ZZ_MURMUR_HASH
+#include "murmur3.c"
+
+unsigned int Zoltan_Hash(ZOLTAN_ID_PTR key, int num_id_entries, unsigned int n)
+{
+ /* Using Murmurhash3:
+  * MurmurHash3 was written by Austin Appleby, and is placed in the
+  * public domain. The author hereby disclaims copyright to this source
+  * code.
+  */
+
+  uint32_t k;
+  MurmurHash3_x86_32((void *)key, sizeof(ZOLTAN_ID_TYPE)*num_id_entries,  
+                     1, (void *)&k);
+  return(k % n);
+}
+
+#endif  /* ZZ_MURMUR_HASH */
+
+#ifdef ZZ_NEW_HASH
+/* Let phi be the golden ratio  = 1.618033887 */
+#define MAXINT_DIV_PHI  2654435761U   
+   /* =2^32/phi,  best for 32 bit machines */
+/* #define MAXINT_DIV_PHI  11400714819323198485U    */
+   /* =2^64/phi,  best for 64 bit machines */
+
+unsigned int Zoltan_Hash(ZOLTAN_ID_PTR key, int num_id_entries, unsigned int n)
+{
+/* EBEB Slightly improved hash function that fixes some weaknesses
+        in the old hash function. An unfortunate side effect is
+        that the new hash function changes some answers, therefore
+        we have not yet replaced the old version. We should consider
+        even stronger hash (like MD5) if we think good hashing is
+        very important. 
+ */
+/* Algorithm: 
  *   This hash function is a variation of Fibonacci hashing,
  *   a multiplicative method. See e.g. Don Knuth's TAOCP,
  *   volume 3, for background information. Bitwise xor is used for 
@@ -61,15 +127,6 @@ extern "C" {
  * Author: 
  *   Erik Boman, eboman@cs.sandia.gov 
  */
-
-/* Let phi be the golden ratio  = 1.618033887 */
-#define MAXINT_DIV_PHI  2654435761U   
-   /* =2^32/phi,  best for 32 bit machines */
-/* #define MAXINT_DIV_PHI  11400714819323198485U    */
-   /* =2^64/phi,  best for 64 bit machines */
-
-unsigned int Zoltan_Hash(ZOLTAN_ID_PTR key, int num_id_entries, unsigned int n)
-{
   unsigned int h, rest, *p, bytes, num_bytes;
   char *byteptr;
   unsigned int low_order_id[10];
@@ -122,20 +179,15 @@ unsigned int Zoltan_Hash(ZOLTAN_ID_PTR key, int num_id_entries, unsigned int n)
 
 }
 
-#else
-/* EBEB Old hash function that is compatible with the answer files. */
+#endif
 
-/* Zoltan_Hash is a hash function for Zoltan ids (local or global). 
- *
- * Input:
- *   key: a key to hash of type ZOLTAN_ID_PTR
- *   num_id_entries: the number of (ZOLTAN_ID_TYPE-sized) entries of the key to use
- *   n: the range of the hash function is 0..n-1
- *
- * Return value:
- *   the hash value, an unsigned integer between 0 and n-1
- *
- * Algorithm: 
+
+#ifdef ZZ_KNUTH_HASH
+
+unsigned int Zoltan_Hash(ZOLTAN_ID_PTR key, int num_id_entries, unsigned int n)
+{
+/* EBEB Old hash function that is compatible with the answer files. */
+/* Algorithm: 
  *   This hash function is based on Don Knuth's golden ratio
  *   multiplicative method. Bitwise xor is used for keys
  *   longer than an int. The method works well for keys
@@ -147,10 +199,6 @@ unsigned int Zoltan_Hash(ZOLTAN_ID_PTR key, int num_id_entries, unsigned int n)
  * Author: 
  *   Erik Boman, eboman@cs.sandia.gov (SNL 9226)
  */
-
-
-unsigned int Zoltan_Hash(ZOLTAN_ID_PTR key, int num_id_entries, unsigned int n)
-{
   unsigned int h, rest, *p, bytes, num_bytes;
   char *byteptr;
   unsigned int low_order_id[10];
@@ -187,7 +235,7 @@ unsigned int Zoltan_Hash(ZOLTAN_ID_PTR key, int num_id_entries, unsigned int n)
   /* Return h mod n */
   return (h%n);
 }
-#endif /* ZZ_NEW_HASH */
+#endif /* ZZ_KNUTH_HASH */
 
 
 /* Zoltan_Recommended_Hash_Size recommends a hash table size that can be used

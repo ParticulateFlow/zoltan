@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2008 Sandia National Laboratories.                          *
- * For more info, see the README file in the top-level Zoltan directory.     *
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 
 #ifdef __cplusplus
 /* if C++, define the rest of this header file as extern C */
@@ -26,18 +59,11 @@ extern "C" {
 #include "order_const.h"
 #include "third_library.h"
 #include "scotch_interface.h"
+#include "scotch_interface_params.h"
 
 #ifndef ZOLTAN_PTSCOTCH
 #define Scotch_Dgraph Scotch_Graph
 #endif /* ZOLTAN_PTSCOTCH */
-
-  /**********  parameters structure for Scotch methods **********/
-static PARAM_VARS Scotch_params[] = {
-  { "SCOTCH_METHOD", NULL, "STRING", 0 },
-  { "SCOTCH_TYPE", NULL, "STRING", 0 },
-  { "SCOTCH_STRAT", NULL, "STRING", 0 },
-  { "SCOTCH_STRAT_FILE", NULL, "STRING", 0 },
-  { NULL, NULL, NULL, 0 } };
 
 static int Zoltan_Scotch_Bind_Param(ZZ * zz, char *alg, char* graph_type, char **strat);
 
@@ -728,6 +754,12 @@ int Zoltan_Scotch(
   if (IS_GLOBAL_GRAPH(gr.graph_type)) {
     ZOLTAN_TRACE_DETAIL(zz, yo, "Calling the PT-Scotch library");
     if (SCOTCH_dgraphMap(&grafdat, &archdat, &stradat, prt.part) != 0) {
+/*  KDDKDD TO COMPARE WITH ZOLTAN2, USE SCOTCH_dgraphPart 
+    KDDKDD INSTEAD OF SCOTCH_dgraphMap .
+
+    printf("KDDKDD CALLING SCOTCH_dgraphPart\n");
+    if (SCOTCH_dgraphPart(&grafdat, num_part, &stradat, prt.part) != 0) {
+*/
       SCOTCH_archExit(&archdat);
       ZOLTAN_FREE(&goal_sizes);
       SCOTCH_dgraphExit(&grafdat);

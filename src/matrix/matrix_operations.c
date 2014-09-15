@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2009 Sandia National Laboratories.                          *
- * For more info, see the README file in the top-level Zoltan directory.     *
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 
 
 #ifdef __cplusplus
@@ -23,9 +56,7 @@ extern "C" {
 #include "zz_util_const.h"
 #include "zoltan_dd.h"
 #include "phg.h"
-#include "matrix.h"
-
-void intSort2asc3(int *, int);
+#include "zoltan_matrix.h"
 
 /************************************/
 /* Auxiliary functions declarations */
@@ -133,9 +164,11 @@ Zoltan_Matrix_Remove_DupArcs(ZZ *zz, int size, Zoltan_Arc *arcs, float* pinwgt,
     ZOLTAN_FREE(&outmat->yend);
   ZOLTAN_FREE(&outmat->ystart);
 
+KDDKDDKDD(zz->Proc, "        Create Maps");
+
   nnz_map = Zoltan_Map_Create(zz, 0, 2 * sizeof(ZOLTAN_GNO_TYPE), 0, size);
   if (nnz_map == NULL) MEMORY_ERROR;
-  y_map = Zoltan_Map_Create(zz, 0, sizeof(ZOLTAN_GNO_TYPE), 0, size);
+  y_map = Zoltan_Map_Create(zz, 0, sizeof(ZOLTAN_GNO_TYPE), 0, size);  /* KDDKDD if y_map is storing vertices, shouldn't it have nY?  size is nPins. */
   if (y_map == NULL) MEMORY_ERROR;
   ysize = (int*) ZOLTAN_CALLOC(size, sizeof(int));
   if (size > 0 && ysize == NULL) MEMORY_ERROR;
@@ -178,8 +211,10 @@ Zoltan_Matrix_Remove_DupArcs(ZZ *zz, int size, Zoltan_Arc *arcs, float* pinwgt,
     i = (int) pos;
   }
 
+KDDKDDKDD(zz->Proc, "        Sort");
   Zoltan_quicksort_list_inc_gno(outmat->yGNO, iperm, 0, outmat->nY - 1);
 
+KDDKDDKDD(zz->Proc, "        Create outmat");
   perm = (int*) ZOLTAN_MALLOC(outmat->nY*sizeof(int));
   if (outmat->nY > 0 && perm == NULL) MEMORY_ERROR;
   for (i = 0 ; i < outmat->nY ; ++i)
@@ -332,7 +367,7 @@ int
 Zoltan_Matrix_Construct_CSR(ZZ *zz, int size, Zoltan_Arc *arcs, float* pinwgt,
 			     Zoltan_matrix *outmat, int offset)
 {
-  static char *yo = "Zoltan_Matrix_Remove_DupArcs";
+  static char *yo = "Zoltan_Matrix_Construct_CSR";
   int *tmparray=NULL;
   WgtFctPtr wgtfct;
   int ierr = ZOLTAN_OK;
@@ -553,6 +588,7 @@ Zoltan_Matrix_Permute(ZZ* zz, Zoltan_matrix *m, ZOLTAN_GNO_TYPE * perm_y)
     if (m->nY && (!yGID || !ypid || (m->bipartite && !ybipart))) MEMORY_ERROR;
 
     /* Get Informations about Y */
+KDDKDDKDD(zz->Proc, "        First DD_Find");
     Zoltan_DD_Find (m->ddY, (ZOLTAN_ID_PTR)m->yGNO, yGID, (char *)ypid, ybipart, m->nY, NULL);
   }
 
@@ -575,6 +611,8 @@ Zoltan_Matrix_Permute(ZZ* zz, Zoltan_matrix *m, ZOLTAN_GNO_TYPE * perm_y)
   ZOLTAN_FREE (&ybipart);
   ZOLTAN_FREE (&tmpgid);
 
+/* KDDKDDKDD  FIX INDENTATION OF THIS BLOCK */
+  if (m->opts.speed != MATRIX_NO_REDIST) {
   /* We have to define dd : old_yGNO, new_yGNO */
   ierr = Zoltan_DD_Create (&dd, zz->Communicator, gno_size_for_dd, gno_size_for_dd, 0, m->globalY/zz->Num_Proc, 0);
   /* Hope a linear assignment will help a little */
@@ -589,14 +627,20 @@ Zoltan_Matrix_Permute(ZZ* zz, Zoltan_matrix *m, ZOLTAN_GNO_TYPE * perm_y)
   if (m->nPins && pinGNO == NULL)
     MEMORY_ERROR;
 
+KDDKDDKDD(zz->Proc, "        Second DD_Find");
+
   Zoltan_DD_Find (dd, (ZOLTAN_ID_PTR)m->pinGNO, (ZOLTAN_ID_PTR)pinGNO, NULL, NULL,
 		  m->nPins, NULL);
-
   Zoltan_DD_Destroy(&dd);
 
   ZOLTAN_FREE(&m->pinGNO);
   m->pinGNO = pinGNO;
   pinGNO = NULL;
+
+  }
+  else {
+KDDKDDKDD(zz->Proc, "        Skipping pin renumbering; not needed.");
+  }
 
  End:
   ZOLTAN_FREE (&pinGNO);

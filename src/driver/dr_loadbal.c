@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2000,2001,2002, Sandia National Laboratories.               *
- * For more info, see the README file in the top-level Zoltan directory.     *
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 
 #include <mpi.h>
 #ifdef TIMER_CALLBACKS
@@ -115,7 +148,6 @@ int setup_zoltan(struct Zoltan_Struct *zz, int Proc, PROB_INFO_PTR prob,
   int nprocs;                    /* Number of processors. */
   int i;                         /* Loop index */
   int ierr;                      /* Error code */
-  int graph_package;
   char errmsg[128];              /* Error message */
 
   DEBUG_TRACE_START(Proc, yo);
@@ -132,8 +164,6 @@ int setup_zoltan(struct Zoltan_Struct *zz, int Proc, PROB_INFO_PTR prob,
     Test.Multi_Callbacks = 1;  /* vertex increment implemented only in
 				  multi callbacks */
   }
-
-  graph_package = -1;
 
   /* Set the user-specified parameters */
   for (i = 0; i < prob->num_params; i++) {
@@ -157,9 +187,12 @@ int setup_zoltan(struct Zoltan_Struct *zz, int Proc, PROB_INFO_PTR prob,
     else if (strcasecmp(prob->params[i].Name, "NUM_LID_ENTRIES") == 0)
       Num_LID = atoi(prob->params[i].Val);
     else if (strcasecmp(prob->params[i].Name, "RETURN_LISTS") == 0)
-      Export_Lists_Special = (strstr(prob->params[i].Val,"partition") != NULL);
-    else if (strcasecmp(prob->params[i].Name, "GRAPH_PACKAGE") == 0)
-      graph_package = i;
+      Export_Lists_Special = ((strstr(prob->params[i].Val,"part") != NULL) ||
+                              (strstr(prob->params[i].Val,"Part") != NULL) ||
+                              (strstr(prob->params[i].Val,"PArt") != NULL) ||
+                              (strstr(prob->params[i].Val,"PARt") != NULL) ||
+                              (strstr(prob->params[i].Val,"PART") != NULL));
+                              /* strcasestr not supported in PGI compiler */
   }
 
   /* Set the load-balance method */
@@ -640,6 +673,35 @@ int run_zoltan(struct Zoltan_Struct *zz, int Proc, PROB_INFO_PTR prob,
 			  export_procs, export_to_part);
     }
 #endif
+
+#undef KDDKDD_OUTPUT_PARTITION_AND_SKIP_MIGREATION_AND_END
+#ifdef KDDKDD_OUTPUT_PARTITION_AND_SKIP_MIGREATION_AND_END
+{
+/* This code dumps the part assignments to files (one per rank)
+ * and then exits before performing migration.
+ * This code assumes the initial distribution of the data to
+ * the ranks was INITIAL_LINEAR; if it isn't, one can't infer
+ * the GID associated with a part in the output.
+ */
+char filename[33];
+FILE *fp;
+if (!Export_Lists_Special) {
+  printf("ERROR:  To output partition without migration, need "
+         "RETURN_LISTS = PART\n");
+  exit(-1);
+}
+sprintf(filename, "%s.out.%04d", pio_info->pexo_fname, Proc);
+fp = fopen(filename, "w");
+for (i = 0; i < num_exported; i++)
+  fprintf(fp, "%d\n", export_to_part[i]);
+ /* fprintf(fp, "%d : %d\n", export_gids[(i+1)*Num_GID-1], export_to_part[i]); */
+fclose(fp);
+MPI_Barrier(MPI_COMM_WORLD);
+MPI_Finalize();
+exit(-1);
+}
+#endif
+
 
     /*
      * Call another routine to perform the migration

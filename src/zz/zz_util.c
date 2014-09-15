@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2000,2001,2002, Sandia National Laboratories.               *
- * For more info, see the README file in the top-level Zoltan directory.     *  
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 
 
 #ifdef __cplusplus
@@ -339,6 +372,49 @@ char *Zoltan_mpi_gno_name()
   return zz_mpi_gno_name;
 }
 
+/* On a linux node, find the total memory currently allocated
+ * to this process.
+ * Return the number of kilobytes allocated to this process.
+ * Return 0 if it is not possible to determine this.
+ */
+long Zoltan_get_process_kilobytes()
+{
+pid_t pid;
+long pageSize, pageKBytes, totalPages;
+char buf[64];
+char *c;
+int f, rc;
+
+#ifdef _SC_PAGESIZE
+  pageSize = sysconf(_SC_PAGESIZE);
+#else
+#warning "Page size query is not possible.  No per-process memory stats."
+  return 0;
+#endif
+
+  pid = getpid();
+  sprintf(buf,"/proc/%d/statm", pid);
+  f = open(buf, O_RDONLY);
+  if (f == -1) return 0;
+
+  c = buf;
+  rc = read(f, (void *)c, 1);
+
+  while ((rc==1) && isdigit(*c)){
+    ++c;
+    rc = read(f, (void *)c, 1);
+  }
+  *c = 0;  /* null terminate */
+  
+  close(f);
+  if (buf[0] == 0) return 0;
+
+  pageKBytes = pageSize / 1024;
+  totalPages = atol(buf);
+
+  return totalPages * pageKBytes;
+}
+
 /* On a linux node, try to write the contents of /proc/meminfo to a file.
  * If committedOnly, then only write the Committed_AS line.  This is the
  * amount of memory that has been granted for memory allocation requests.
@@ -413,6 +489,58 @@ char fbuf[64],buf[2048],label[64],value[64],units[64];
   close(f);
 }
 
+/* On a linux node, just get the committed line as a char string.
+ * It's the caller's responsibility to free the result string.
+ */
+void Zoltan_get_linux_meminfo(char *msg, char **result)
+{
+int f, n, got_it;
+size_t fsize, rc;
+char *c=NULL, *next=NULL, *c_end;
+char buf[2048],label[64],value[64],units[64];
+
+  *result=NULL;
+  f = open("/proc/meminfo", O_RDONLY);
+  if (f == -1) return;
+
+  c = buf;
+  rc = read(f, (void *)c++, 1);
+
+  while ((rc == 1) && (c - buf < 2047)){
+    rc = read(f, (void *)c++, 1);
+  }
+
+  fsize = c-buf-1;
+
+  close(f);
+
+  c = buf;
+  c_end = buf + fsize;
+  got_it=0;
+
+  while( c < c_end){
+    next = strchr(c, '\n');
+    *next = 0;
+    n = sscanf(c, "%s %s %s", label, value, units);
+    if (n == 3){
+      if (strcmp(label, "Committed_AS:") == 0){
+        if (msg != NULL) sprintf(buf,"%s: \t%s \t%s %s\n",msg,label,value,units);
+        else             sprintf(buf,"%s %s %s\n",label,value,units);
+
+        fsize = strlen(buf);
+        got_it=1;
+        break;
+      }
+    }
+    c = next + 1;
+  }
+  if (got_it){
+    c = malloc(strlen(buf) + 1);
+    strcpy(c, buf);
+    *result = c;
+  }
+}
+
 int Zoltan_get_global_id_type(char **name)
 {
   if (name){
@@ -423,7 +551,7 @@ int Zoltan_get_global_id_type(char **name)
 
 int Zoltan_overflow_test(size_t val)
 {
-ssize_t mask;
+size_t mask;
 
   /* is value too large to store an int */
 
@@ -439,6 +567,50 @@ ssize_t mask;
   return 0;
 }
 
+
+/*****************************************************************************/
+#ifdef ZOLTAN_PURIFY
+
+/* Purify has a bug in strcasecmp and strncasecmp; 
+ * for now, we provide a work-around for purify builds. */
+
+int Zoltan_strcasecmp(const char *s1, const char *s2) 
+{
+  char *t1, *t2;
+  int len1 = strlen(s1), len2 = strlen(s2);
+  int i;
+  t1 = ZOLTAN_MALLOC((len1+len2+2)*sizeof(char));
+  t2 = t1 + len1 + 1;
+  strcpy(t1, s1);
+  strcpy(t2, s2);
+  for (i = 0; i < len1; i++) 
+    if (t1[i] >= 'A' && t1[i] <= 'Z') t1[i] = t1[i] - 'A' + 'a';
+  for (i = 0; i < len2; i++) 
+    if (t2[i] >= 'A' && t2[i] <= 'Z') t2[i] = t2[i] - 'A' + 'a';
+  i = strcmp(t1, t2);
+  ZOLTAN_FREE(&t1);
+  return i;
+}
+
+int Zoltan_strncasecmp(const char *s1, const char *s2, size_t n) 
+{
+  char *t1, *t2;
+  int len1 = strlen(s1), len2 = strlen(s2);
+  int i;
+  t1 = ZOLTAN_MALLOC((len1+len2+2)*sizeof(char));
+  t2 = t1 + len1 + 1;
+  strcpy(t1, s1);
+  strcpy(t2, s2);
+  for (i = 0; i < len1; i++) 
+    if (t1[i] >= 'A' && t1[i] <= 'Z') t1[i] = t1[i] - 'A' + 'a';
+  for (i = 0; i < len2; i++) 
+    if (t2[i] >= 'A' && t2[i] <= 'Z') t2[i] = t2[i] - 'A' + 'a';
+  i = strncmp(t1, t2, n);
+  ZOLTAN_FREE(&t1);
+  return i;
+}
+
+#endif /* ZOLTAN_PURIFY */
 
 
 #ifdef __cplusplus

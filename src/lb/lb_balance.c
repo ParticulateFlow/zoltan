@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2000,2001,2002, Sandia National Laboratories.               *
- * For more info, see the README file in the top-level Zoltan directory.     *  
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 
 
 #ifdef __cplusplus
@@ -24,8 +57,8 @@ extern "C" {
 #include "key_params.h"
 #include "ha_const.h"
 #include "all_allo_const.h"
-#ifdef ZOLTAN_DRUM
-#include "ha_drum.h"
+#ifdef ZOLTAN_OVIS
+#include "ha_ovis.h"
 #endif
 
 /*****************************************************************************/
@@ -130,6 +163,10 @@ int ierr = ZOLTAN_OK;    /* Error code */
 int *import_to_part = NULL;    /* Array used as dummy arg in partitioning. */
 int *export_to_part = NULL;    /* Array used as dummy arg in partitioning. */
 
+#ifdef ZOLTAN_OVIS
+struct OVIS_parameters ovisParameters;
+#endif
+
   ZOLTAN_TRACE_ENTER(zz, yo);
 
   /* Determine whether part parameters were set.  Report error if
@@ -144,6 +181,16 @@ int *export_to_part = NULL;    /* Array used as dummy arg in partitioning. */
     ierr = ZOLTAN_FATAL;
     goto End;
   }
+
+
+#ifdef ZOLTAN_OVIS
+  Zoltan_OVIS_Setup(zz, &ovisParameters);
+  if (ovisParameters.outputLevel > 5){
+    int error = ZOLTAN_OK;    /* Error code */
+    int acg_num_obj = zz->Get_Num_Obj(zz->Get_Num_Obj_Data, &error);
+    printf ("Entering Proc %d num_objs %d\n", zz->Proc, acg_num_obj);
+  }
+#endif 
   
   ierr = Zoltan_LB(zz, 0, changes, num_gid_entries, num_lid_entries,
            num_import_objs, import_global_ids, import_local_ids,
@@ -153,6 +200,13 @@ int *export_to_part = NULL;    /* Array used as dummy arg in partitioning. */
 
 
 End:
+
+#ifdef ZOLTAN_OVIS
+  if (ovisParameters.outputLevel > 5){
+    printf ("Exiting Proc %d num_import_objs %d num_export_objs %d\n", zz->Proc, *num_import_objs, *num_export_objs);
+  }
+#endif 
+
   /* Not returning import/export part information; free it if allocated. */
   if (import_to_part != NULL) 
     Zoltan_Special_Free(zz, (void **)(void*) &import_to_part, 
@@ -259,6 +313,9 @@ struct Hash_Node **ht;
 int *export_all_procs, *export_all_to_part, *parts=NULL;
 ZOLTAN_ID_PTR all_global_ids=NULL, all_local_ids=NULL;
 ZOLTAN_ID_PTR gid;
+#ifdef ZOLTAN_OVIS
+struct OVIS_parameters ovisParameters;
+#endif
 
   ZOLTAN_TRACE_ENTER(zz, yo);
 
@@ -271,12 +328,17 @@ ZOLTAN_ID_PTR gid;
 
   start_time = Zoltan_Time(zz->Timer);
 
-#ifdef ZOLTAN_DRUM
-  /* initialize DRUM if needed */
-  Zoltan_Drum_Create_Model(zz);
+#ifdef ZOLTAN_OVIS
+  Zoltan_OVIS_Setup(zz, &ovisParameters);
+  if (zz->Proc == 0)
+    printf("OVIS PARAMETERS %s %s %d %f\n", 
+           ovisParameters.hello, 
+           ovisParameters.dll, 
+           ovisParameters.outputLevel, 
+           ovisParameters.minVersion);
+  ovis_enabled(zz->Proc, ovisParameters.dll);
 
-  /* stop DRUM monitors */
-  Zoltan_Drum_Stop_Monitors(zz);
+
 #endif
 
   /* 
@@ -329,17 +391,6 @@ ZOLTAN_ID_PTR gid;
 
   Zoltan_Srand_Sync(Zoltan_Rand(NULL), NULL, zz->Communicator);
 
-  /*
-   *  Construct the heterogenous machine description.
-   */
-
-  error = Zoltan_Build_Machine_Desc(zz);
-
-  if (error == ZOLTAN_FATAL)
-    goto End;
-
-  ZOLTAN_TRACE_DETAIL(zz, yo, "Done machine description");
-
   /* Since generating a new partition, need to free old mapping vector */
   zz->LB.OldRemap = zz->LB.Remap;
   zz->LB.Remap = NULL;
@@ -361,9 +412,20 @@ ZOLTAN_ID_PTR gid;
    * Generate parts sizes.
    */
 
-#ifdef ZOLTAN_DRUM
-  /* set part sizes computed by DRUM, if requested */
-  Zoltan_Drum_Set_Part_Sizes(zz);
+#ifdef ZOLTAN_OVIS
+  /* set part sizes computed by OVIS, if requested. Processes set only their own value */
+  {
+    float part_sizes[1];
+    int part_ids[1], wgt_idx[1];
+
+    wgt_idx[0] = 0;
+    part_ids[0] = 0;
+    ovis_getPartsize(&(part_sizes[0])); 
+    printf("Rank %d ps %f\n",zz->Proc, part_sizes[0]);
+    /* clear out old part size info first */
+    Zoltan_LB_Set_Part_Sizes(zz, 0, -1, NULL, NULL, NULL);
+    Zoltan_LB_Set_Part_Sizes(zz, 0, 1, part_ids, wgt_idx, part_sizes);
+  }
 #endif
 
   wgt_dim = zz->Obj_Weight_Dim;
@@ -380,6 +442,25 @@ ZOLTAN_ID_PTR gid;
   /* Get part sizes. */
   Zoltan_LB_Get_Part_Sizes(zz, zz->LB.Num_Global_Parts, part_dim,
     part_sizes);
+
+
+#ifdef ZOLTAN_OVIS
+  /*  if (ovisParameters.outputlevel > 3) */
+  {
+    int myRank = zz->Proc;
+    if (myRank == 0){
+      int i, j;
+
+      for (i = 0; i < zz->LB.Num_Global_Parts; i++){
+        for (j = 0; j < part_dim; j++){
+          printf("Rank %d AG: part_sizes[%d] = %f (Num_Global_Parts = %d, part_dim = %d)\n",zz->Proc,
+                 (i*part_dim+j), part_sizes[i*part_dim+j],zz->LB.Num_Global_Parts, part_dim);
+        }
+      }
+    }
+  }
+#endif
+
 
   /*
    * Call the actual load-balancing function.
@@ -413,12 +494,6 @@ ZOLTAN_ID_PTR gid;
   }
 
   ZOLTAN_TRACE_DETAIL(zz, yo, "Done partitioning");
-
-#ifdef ZOLTAN_DRUM
-  /* restart DRUM monitors -- should happen later but there are a lot
-     of ways out of Zoltan_LB and we want to make sure they do start */
-  Zoltan_Drum_Start_Monitors(zz);
-#endif
 
   if (*num_import_objs >= 0)
     MPI_Allreduce(num_import_objs, &gmax, 1, MPI_INT, MPI_MAX, 
@@ -597,13 +672,7 @@ ZOLTAN_ID_PTR gid;
   
         /* Create a lookup table for exported IDs */
   
-        if (*num_export_objs > 16){   /* could be 0, maybe only importing */
-          ts = (*num_export_objs) / 4;   /* what's a good table size? */
-        }
-        else{
-          ts = *num_export_objs;
-        }
-  
+        ts = Zoltan_Recommended_Hash_Size(*num_export_objs);
         ht = create_hash_table(zz, *export_global_ids, *num_export_objs, ts);
   
         /* Create a list of all gids, lids and parts */
@@ -1005,6 +1074,7 @@ int i, j;
 
   return ht;
 }
+
 static int search_hash_table(ZZ *zz, ZOLTAN_ID_PTR gid,
                          struct Hash_Node **ht, int tableSize)
 {
@@ -1025,7 +1095,6 @@ struct Hash_Node *hn;
     }
     hn = hn->next;
   }
-
   return found; 
 }
 static void free_hash_table(struct Hash_Node **ht, int tableSize)

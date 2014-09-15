@@ -1,15 +1,48 @@
-/*****************************************************************************
- * Zoltan Library for Parallel Applications                                  *
- * Copyright (c) 2009 Sandia National Laboratories.                          *
- * For more info, see the README file in the top-level Zoltan directory.     *
- *****************************************************************************/
-/*****************************************************************************
- * CVS File Information :
- *    $RCSfile$
- *    $Author$
- *    $Date$
- *    Revision$
- ****************************************************************************/
+/* 
+ * @HEADER
+ *
+ * ***********************************************************************
+ *
+ *  Zoltan Toolkit for Load-balancing, Partitioning, Ordering and Coloring
+ *                  Copyright 2012 Sandia Corporation
+ *
+ * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+ * the U.S. Government retains certain rights in this software.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the Corporation nor the names of the
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Questions? Contact Karen Devine	kddevin@sandia.gov
+ *                    Erik Boman	egboman@sandia.gov
+ *
+ * ***********************************************************************
+ *
+ * @HEADER
+ */
 
 #ifdef __cplusplus
 /* if C++, define the rest of this header file as extern C */
@@ -22,7 +55,7 @@ extern "C" {
 #include "zz_util_const.h"
 #include "zoltan_dd.h"
 #include "phg.h"
-#include "matrix.h"
+#include "zoltan_matrix.h"
 
 
 typedef struct ZOLTAN_DIST_PART_ {
@@ -176,7 +209,7 @@ int
 Zoltan_Matrix2d_Distribute (ZZ* zz, Zoltan_matrix inmat, /* Cannot be const as we can share it inside outmat */
 			    Zoltan_matrix_2d *outmat, int copy)
 {
-  static char *yo = "Zoltan_Matrix_Build2d";
+  static char *yo = "Zoltan_Matrix2d_Distribute";
   int ierr = ZOLTAN_OK;
   int nProc_x, nProc_y;
   int myProc_x, myProc_y;
@@ -220,8 +253,11 @@ Zoltan_Matrix2d_Distribute (ZZ* zz, Zoltan_matrix inmat, /* Cannot be const as w
   myProc_x = outmat->comm->myProc_x;
   myProc_y = outmat->comm->myProc_y;
 
+KDDKDDKDD(zz->Proc, "    Zoltan_Matrix_Remove_Duplicates");
   ierr = Zoltan_Matrix_Remove_Duplicates(zz, outmat->mtx, &outmat->mtx);
 
+/* KDDKDDKDD  FIX INDENTATION OF THIS BLOCK */
+if (inmat.opts.speed != MATRIX_NO_REDIST) {
   if (outmat->hashDistFct == (distFnct *)&Zoltan_Distribute_Origin) {
     /* I need to know the original distribution */
     if (outmat->mtx.ddX != outmat->mtx.ddY) { /* No initial distribution */
@@ -234,6 +270,7 @@ Zoltan_Matrix2d_Distribute (ZZ* zz, Zoltan_matrix inmat, /* Cannot be const as w
       if (outmat->mtx.nY > 0 && cmember == NULL) MEMORY_ERROR;
       Zoltan_DD_Find (outmat->mtx.ddY, (ZOLTAN_ID_PTR)outmat->mtx.yGNO, NULL, (char *)cmember, NULL,
 		      outmat->mtx.nY, NULL);
+KDDKDDKDD(zz->Proc, "    Zoltan_Distribute_Partition_Register");
       partdata = Zoltan_Distribute_Partition_Register(zz, outmat->mtx.nY, outmat->mtx.yGNO,
 						      cmember, zz->Num_Proc, zz->Num_Proc);
       ZOLTAN_FREE(&cmember);
@@ -258,6 +295,7 @@ Zoltan_Matrix2d_Distribute (ZZ* zz, Zoltan_matrix inmat, /* Cannot be const as w
   yGNO = outmat->mtx.yGNO;
   pinGNO = outmat->mtx.pinGNO;
 
+KDDKDDKDD(zz->Proc, "    CommPlan Hash");
   cnt = 0;
   for (i = 0; i < outmat->mtx.nY; i++) {
     ZOLTAN_GNO_TYPE edge_gno=-1;
@@ -309,6 +347,7 @@ Zoltan_Matrix2d_Distribute (ZZ* zz, Zoltan_matrix inmat, /* Cannot be const as w
    * They become non-zeros in the 2D data distribution.
    */
 
+KDDKDDKDD(zz->Proc, "    CommPlan Create");
   msg_tag--;
   ierr = Zoltan_Comm_Create(&plan, cnt, proclist, communicator, msg_tag, &outmat->mtx.nPins);
   ZOLTAN_FREE(&proclist);
@@ -333,9 +372,11 @@ Zoltan_Matrix2d_Distribute (ZZ* zz, Zoltan_matrix inmat, /* Cannot be const as w
 
   /* Unpack the non-zeros received. */
 
+KDDKDDKDD(zz->Proc, "    Zoltan_Matrix_Remove_DupArcs");
   /* TODO: do take care about singletons */
   Zoltan_Matrix_Remove_DupArcs(zz, outmat->mtx.nPins, (Zoltan_Arc*)nonzeros, tmpwgtarray,
 			       &outmat->mtx);
+}
 
   /* Now we just have to change numbering */
   outmat->dist_y = (ZOLTAN_GNO_TYPE *) ZOLTAN_CALLOC((nProc_y+1), sizeof(ZOLTAN_GNO_TYPE));
@@ -356,8 +397,10 @@ Zoltan_Matrix2d_Distribute (ZZ* zz, Zoltan_matrix inmat, /* Cannot be const as w
     perm_y[i] = i + outmat->dist_y[myProc_y];
   }
 
+KDDKDDKDD(zz->Proc, "    Zoltan_Matrix_Permute");
   Zoltan_Matrix_Permute(zz, &outmat->mtx, perm_y);
 
+KDDKDDKDD(zz->Proc, "    Zoltan_Matrix_Permute done");
  End:
   ZOLTAN_FREE(&perm_y);
   ZOLTAN_FREE(&proclist);
